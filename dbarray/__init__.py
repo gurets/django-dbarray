@@ -44,12 +44,34 @@ class ArrayFieldBase(object):
         else:
             for v in value:
                 super(ArrayFieldBase, self).run_validators(v)
-                
+
+
+class ArrayArrayFieldBase(ArrayFieldBase):
+    """Django field type for an array of array of values. Supported only on PostgreSQL.
+    
+    This class is not meant to be instantiated directly; instead, field classes
+    should inherit from this class and from an appropriate Django model class.
+    """
+    
+    _south_introspects = True
+    
+    def db_type(self, connection):
+        require_postgres(connection)
+        return super(ArrayFieldBase, self).db_type(connection=connection) + '[][]'
+
+
 class ArrayFieldMetaclass(models.SubfieldBase):
     pass
 
 def array_field_factory(name, fieldtype, module=ArrayFieldBase.__module__):
     return ArrayFieldMetaclass(name, (ArrayFieldBase, fieldtype),
+        {'__module__': module,
+        'description': "An array, where each element is of the same type "\
+        "as %s." % fieldtype.__name__})
+
+
+def array_array_field_factory(name, fieldtype, module=ArrayArrayFieldBase.__module__):
+    return ArrayFieldMetaclass(name, (ArrayArrayFieldBase, fieldtype),
         {'__module__': module,
         'description': "An array, where each element is of the same type "\
         "as %s." % fieldtype.__name__})
@@ -64,5 +86,4 @@ IntegerArrayField = array_field_factory('IntegerArrayField', models.IntegerField
 FloatArrayField = array_field_factory('FloatArrayField', models.FloatField)
 CharArrayField = array_field_factory('CharArrayField', models.CharField)
 TextArrayField = array_field_factory('TextArrayField', models.TextField)
-
-    
+TextArrayArrayField = array_array_field_factory('TextArrayArrayField', models.TextField)
